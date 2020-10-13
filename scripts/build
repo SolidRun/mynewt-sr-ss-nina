@@ -1,0 +1,99 @@
+#!/bin/sh
+
+# Globals
+PROG="$(basename "${0}")"
+VERSION="1.8.1"
+DEVICE="b1"
+NEWT="$(which newt)"
+NINA_b1_boot="bin/targets/nina-b1_boot/app/@mcuboot/boot/mynewt/mynewt.elf.bin"
+NINA_b1_blehci="bin/targets/nina-b1_blehci/app/@apache-mynewt-nimble/apps/blehci/blehci.img"
+NINA_b3_boot="bin/targets/nina-b3_boot/app/@mcuboot/boot/mynewt/mynewt.elf.bin"
+NINA_b3_blehci="bin/targets/nina-b3_blehci/app/@apache-mynewt-nimble/apps/blehci/blehci.img"
+
+# Functions
+usage () {
+	echo "${PROG}: version                                  : Version used for build"
+	echo "    -d|--device                                 : Device to build Nina <b1|B1> or Nina <b3|B3>"
+	echo ""
+	echo "    example: ${PROG} --device b1 1.8.1"
+	exit 1
+}
+
+create_dir () {
+	if [ ! -d "${1}" ] ; then
+		mkdir "${1}"
+	fi
+}
+build_nina_b1 () {
+	${NEWT} build nina-b1_boot
+	${NEWT} build nina-b1_blehci
+	${NEWT} create-image nina-b1_blehci "${VERSION}"
+
+	create_dir "output"
+	cp "${NINA_b1_boot}" "output/nina-b1_boot-${VERSION}.bin"
+	cp "${NINA_b1_blehci}" "output/nina-b1_blehci-${VERSION}.bin"
+	chmod -x "output/nina-b1_boot-${VERSION}.bin"
+}
+
+build_nina_b3 () {
+	${NEWT} build nina-b3_boot
+	${NEWT} build nina-b3_blehci
+	${NEWT} create-image nina-b3_blehci "${VERSION}"
+
+	create_dir "output"
+	cp "${NINA_b3_boot}" "output/nina-b3_boot-${VERSION}.bin"
+	cp "${NINA_b3_blehci}" "output/nina-b3_blehci-${VERSION}.bin"
+	chmod -x "output/nina-b3_boot-${VERSION}.bin"
+}
+
+# Main
+options=$(getopt -l "help,device:" -o ":hd:" -- "${@}")
+eval set -- "${options}"
+
+while true
+do
+	case ${1} in
+		-h|--help )
+			usage
+			;;
+		-d|--device )
+			shift
+			DEVICE="${1}"
+			;;
+		\? )
+			usage
+			;;
+		: )
+			echo "Invalid option: ${OPTARG} requires an argument" 1>&2
+			;;
+		-- )
+			shift
+			break
+			;;
+		* )
+			usage
+			;;
+	esac
+	shift
+done
+
+if [ -z "${NEWT}" ] ; then
+	echo "Please install newt"
+	exit 1
+fi
+
+if [ -n "${1}" ] ; then
+	VERSION="${1}"
+fi
+
+case "${DEVICE}" in
+	b1|B1 )
+		build_nina_b1 "${VERSION}"
+		;;
+	b3|B3 )
+		build_nina_b3 "${VERSION}"
+		;;
+	* )
+		echo "Unknown device to build for <${DEVICE}>"
+		;;
+esac
