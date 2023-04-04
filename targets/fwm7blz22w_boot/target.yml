@@ -1,0 +1,3 @@
+target.app: "@mcuboot/boot/mynewt"
+target.bsp: "@apache-mynewt-core/hw/bsp/fwm7blz22w"
+target.build_profile: optimized
